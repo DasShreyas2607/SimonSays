@@ -9,6 +9,7 @@
 #define SCREEN_HEIGHT 64
 #define SPEAKER_PIN 13
 #include "pitches.h"
+
 int melody[] = {
   NOTE_E7, NOTE_E7, 0, NOTE_E7,
   0, NOTE_C7, NOTE_E7, 0,
@@ -22,14 +23,6 @@ int tempo[] = {
   12, 12, 12, 12,
   12, 12, 12, 12,
 };
-
-/**
-   Simon Game for Arduino with Score display
-
-   Copyright (C) 2022, Uri Shaked
-
-   Released under the MIT License.
-*/
 
 
 /* Constants - define pin numbers for LEDs,
