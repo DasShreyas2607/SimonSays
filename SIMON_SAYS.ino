@@ -1,7 +1,12 @@
-#define LED_BLUE 5
+#define LED_BLUE 7
 #define LED_RED 3
-#define LED_YELLOW 2
-#define LED_GREEN 4 
+#define LED_RGB1 11
+#define LED_RGB2 10
+#define LED_RGB3 9
+#define LED_GREEN 5
+#define red 165
+#define gre 10
+#define blu 255
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -9,7 +14,8 @@
 #define SCREEN_HEIGHT 64
 #define SPEAKER_PIN 13
 #include "pitches.h"
-
+#define rd A0
+// label main;
 int melody[] = {
   NOTE_E7, NOTE_E7, 0, NOTE_E7,
   0, NOTE_C7, NOTE_E7, 0,
@@ -27,17 +33,12 @@ int tempo[] = {
 
 /* Constants - define pin numbers for LEDs,
    buttons and speaker, and also the game tones: */
-const uint8_t ledPins[] = {LED_BLUE, LED_RED, LED_YELLOW, LED_GREEN};
-const uint8_t buttonPins[] = {8, 9, 10, 11};
-
-// These are connected to 74HC595 shift register (used to show game score):
-const int LATCH_PIN = A1;  // 74HC595 pin 12
-const int DATA_PIN = A0;  // 74HC595pin 14
-const int CLOCK_PIN = A2;  // 74HC595 pin 11
+const uint8_t ledPins[] = {LED_BLUE, LED_RED, LED_GREEN};
+const uint8_t buttonPins[] = {A0, A1, A2, A3};
 
 #define MAX_GAME_LENGTH 100
 
-const int gameTones[] = { 5000, 3500, 2500, 1500};
+const int gameTones[] = { 5000, 3500, 2500, 5000};
 
 /* Global variables - store the game state */
 uint8_t gameSequence[MAX_GAME_LENGTH] = {0};
@@ -64,27 +65,20 @@ void setup() {
   oled.setCursor(0, 0);       
   oled.println("MARVEL"); 
   oled.display(); 
-  for (byte i = 0; i < 4; i++) {
+  for (byte i = 0; i < 3; i++) {
     pinMode(ledPins[i], OUTPUT);
+  }
+  for (byte i = 0; i < 4; i++) {
     pinMode(buttonPins[i], INPUT_PULLUP);
   }
+  pinMode(LED_RGB1, OUTPUT);
+  pinMode(LED_RGB2, OUTPUT);
+  pinMode(LED_RGB3, OUTPUT);
   pinMode(SPEAKER_PIN, OUTPUT);
-  pinMode(LATCH_PIN, OUTPUT);
-  pinMode(CLOCK_PIN, OUTPUT);
-  pinMode(DATA_PIN, OUTPUT);
 
   // The following line primes the random number generator.
   // It assumes pin A3 is floating (disconnected):
-  randomSeed(analogRead(A3));
-}
-
-const uint8_t DASH = 0b10111111;
-
-void sendScore(uint8_t high, uint8_t low) {
-  digitalWrite(LATCH_PIN, LOW);
-  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, low);
-  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, high);
-  digitalWrite(LATCH_PIN, HIGH);
+  randomSeed(analogRead(rd));
 }
 
 void displayScore() {
@@ -97,7 +91,7 @@ void displayScore() {
     oled.print("0");  
   }
   oled.println(gameIndex);
-  Serial.println(gameIndex);
+  // Serial.println(gameIndex);
   oled.display();
 }
 
@@ -105,11 +99,27 @@ void displayScore() {
    Lights the given LED and plays a suitable tone
 */
 void lightLedAndPlayTone(byte ledIndex) {
-  digitalWrite(ledPins[ledIndex], HIGH);
-  tone(SPEAKER_PIN, gameTones[ledIndex]);
-  delay(300);
-  digitalWrite(ledPins[ledIndex], LOW);
-  noTone(SPEAKER_PIN);
+  if (ledIndex == 3)
+  {
+    analogWrite(SPEAKER_PIN, 170);
+    // Serial.println(ledIndex);
+    analogWrite(LED_RGB1, gre);
+    analogWrite(LED_RGB2, red);
+    analogWrite(LED_RGB3, blu);
+    delay(300);
+    analogWrite(LED_RGB1, 0);
+    analogWrite(LED_RGB2, 0);
+    analogWrite(LED_RGB3, 0);
+    analogWrite(SPEAKER_PIN, 0);
+  }
+  else
+  {
+    tone(SPEAKER_PIN, gameTones[ledIndex]);
+    digitalWrite(ledPins[ledIndex], HIGH);
+    delay(300);
+    digitalWrite(ledPins[ledIndex], LOW);
+    noTone(SPEAKER_PIN);
+  }
 }
 
 /**
@@ -139,39 +149,29 @@ byte readButtons() {
     delay(1);
   }
 }
-
-/**
-  Play the game over sequence, and report the game score
-*/
-void gameOver1() {
-  Serial.print("Game over! your score: ");
-  Serial.println(gameIndex - 1);
-  gameIndex = 0;
-  delay(200);
-
-  // Play a Wah-Wah-Wah-Wah sound
-  for (int pitch = 5; pitch > 1; pitch--) {
-    tone(SPEAKER_PIN, pitch*1000);
-    delay(150);
-  }
-  noTone(SPEAKER_PIN);
-
-  sendScore(DASH, DASH);
-  delay(500);
-}
-
  
 void gameOver() {
+  oled.clearDisplay();
+  oled.setTextSize(4); 
+  oled.setCursor(0, 0);       
+  oled.println(" Game Over "); 
+  oled.display();
+  oled.setTextSize(8); 
   delay(200);
-  Serial.println(gameIndex - 1);
+  // Serial.println(gameIndex - 1);
   gameIndex = 0;
   delay(200);
   int size = sizeof(melody) / sizeof(int);
-  for(int i=0;i<4;i++)
+  for(int i=0;i<3;i++)
   {
     digitalWrite(ledPins[i],HIGH);
-    delay(5);
   }
+  analogWrite(LED_RGB1, gre);
+  analogWrite(LED_RGB2, red);
+  analogWrite(LED_RGB3, blu);
+  delay(5);
+  oled.setCursor(0, 0);       
+  oled.println(" -- "); 
   for (int thisNote = 0; thisNote < size; thisNote++) {
 
     // to calculate the note duration, take one second
@@ -189,10 +189,14 @@ void gameOver() {
     // stop the tone playing:
     buzz(SPEAKER_PIN, 0, noteDuration);
   }
-  for(int i=0;i<4;i++)
+  for(int i=0;i<3;i++)
+  {
     digitalWrite(ledPins[i],LOW);
-  sendScore(DASH, DASH);
-  delay(500);
+  }
+  analogWrite(LED_RGB1, 0);
+  analogWrite(LED_RGB2, 0);
+  analogWrite(LED_RGB3, 0);
+  delay(5);
 }
  
 void buzz(int targetPin, long frequency, long length) {
